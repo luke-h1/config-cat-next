@@ -38,6 +38,20 @@ interface Props {
   posts: Post[];
 }
 
+const fetchUser = async () => {
+  let id =
+    typeof window !== "undefined" ? sessionStorage.getItem("userId") : null;
+
+  if (!id) {
+    id = crypto.getRandomValues(new Uint32Array(1))[0].toString();
+
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("userId", id);
+    }
+  }
+  return id;
+};
+
 export default function Home({ posts, enableBlogFeature }: Props) {
   return (
     <>
@@ -66,11 +80,17 @@ export default function Home({ posts, enableBlogFeature }: Props) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<Props> = async () => {
+export const getServerSideProps: GetServerSideProps<Props> = async (ctx) => {
   const client = configcat.getClient(process.env.NEXT_PUBLIC_CONFIGCAT_SDK_KEY);
+  const cookies = ctx.req.headers.cookie;
+
+  const user = await fetchUser();
 
   // default value of false if the API call fails
-  const enableBlogFeature = await client.getValueAsync("blogFeature", false);
+  const enableBlogFeature = await client.getValueAsync("blogFeature", false, {
+    identifier: user,
+    custom: {},
+  });
   const posts = getSortedPosts();
 
   return {
